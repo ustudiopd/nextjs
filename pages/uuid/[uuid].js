@@ -1,9 +1,9 @@
 // pages/uuid/[uuid].js
 import { useEffect, useState } from 'react';
+import Link from 'next/link'; // survey 페이지로 이동하기 위해 Link 컴포넌트 import
 import pool from '../../lib/db';
 
 export default function AttendancePage({ record, surveyUrl }) {
-  // surveyUrl: 설문조사 URL (예: QRSurveyLink 값을 그대로 사용하거나, uuid를 쿼리스트링으로 추가한 값)
   const [qrDataUrl, setQrDataUrl] = useState('');
 
   useEffect(() => {
@@ -35,9 +35,13 @@ export default function AttendancePage({ record, surveyUrl }) {
       }}
     >
       <h1 style={{ marginBottom: '1rem' }}>{record.Attendees}님의 정보</h1>
-      <p><strong>이벤트:</strong> {record.Event}</p>
-      
-      <p style={{ fontWeight: 'bold', marginTop: '1rem' }}>설문조사로 이동하는 QR 코드:</p>
+      <p>
+        <strong>이벤트:</strong> {record.Event}
+      </p>
+
+      <p style={{ fontWeight: 'bold', marginTop: '1rem' }}>
+        설문조사로 이동하는 QR 코드:
+      </p>
       {qrDataUrl ? (
         <img
           src={qrDataUrl}
@@ -47,7 +51,7 @@ export default function AttendancePage({ record, surveyUrl }) {
       ) : (
         <p>QR 코드 로딩 중...</p>
       )}
-      
+
       <p style={{ margin: '0.5rem 0' }}>
         <strong>출석 여부:</strong> {record.AttendanceStatus ? '출석' : '미출석'}
       </p>
@@ -65,6 +69,15 @@ export default function AttendancePage({ record, surveyUrl }) {
         <a href={surveyUrl} target="_blank" rel="noopener noreferrer">
           설문조사 바로가기
         </a>
+      </p>
+
+      {/* 새로 추가된 설문조사 참여 버튼 - 클릭 시 survey/[uuid].js 페이지로 이동 */}
+      <p style={{ margin: '1rem 0' }}>
+        <Link href={`/survey/${record.UUID}`}>
+          <a style={{ textDecoration: 'underline', color: 'blue' }}>
+            설문조사 참여
+          </a>
+        </Link>
       </p>
     </div>
   );
@@ -100,8 +113,7 @@ export async function getStaticProps({ params }) {
       return { props: { record: null, surveyUrl: '' }, revalidate: 60 };
     }
 
-    // QRSurveyLink 필드가 설문조사 기본 URL이라면, 필요에 따라 uuid 토큰을 붙입니다.
-    // 예를 들어, record.QRSurveyLink가 "https://survey.example.com"이면:
+    // QRSurveyLink 필드가 설문조사 기본 URL이라면, uuid 토큰을 붙입니다.
     const surveyUrl = record.QRSurveyLink.includes('?')
       ? `${record.QRSurveyLink}&uuid=${encodeURIComponent(record.UUID)}`
       : `${record.QRSurveyLink}?uuid=${encodeURIComponent(record.UUID)}`;
