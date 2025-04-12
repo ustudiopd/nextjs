@@ -1,87 +1,100 @@
 // pages/uuid/[uuid].js
 import { useEffect, useState } from 'react';
-import Link from 'next/link'; // survey 페이지로 이동하기 위해 Link 컴포넌트 import
+import Link from 'next/link';
 import pool from '../../lib/db';
 
-export default function AttendancePage({ record, surveyUrl }) {
+export default function AttendancePage({ record }) {
   const [qrDataUrl, setQrDataUrl] = useState('');
 
   useEffect(() => {
-    if (surveyUrl) {
-      // record.QRSurveyLink 혹은 재구성된 surveyUrl을 이용하여 QR 코드를 생성합니다.
-      fetch(`/api/qr?data=${encodeURIComponent(surveyUrl)}`)
+    if (record) {
+      // 현재 페이지 주소: window.location.origin + '/uuid/' + record.UUID
+      const currentDomain = typeof window !== 'undefined' 
+        ? window.location.origin 
+        : '';
+      const pageUrl = `${currentDomain}/uuid/${record.UUID}`;
+
+      // QR 코드 생성 API에 현재 페이지 주소를 넘겨서 QR 이미지 생성
+      fetch(`/api/qr?data=${encodeURIComponent(pageUrl)}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.dataUrl) {
             setQrDataUrl(data.dataUrl);
           }
         })
-        .catch((error) => console.error("Error fetching QR code:", error));
+        .catch((error) => console.error('Error fetching QR code:', error));
     }
-  }, [surveyUrl]);
+  }, [record]);
 
   if (!record) {
     return <div>데이터를 찾을 수 없습니다.</div>;
   }
 
   return (
-    <div
-      style={{
-        maxWidth: '600px',
-        margin: '0 auto',
-        padding: '1rem',
-        fontFamily: 'sans-serif',
-        textAlign: 'center',
-      }}
-    >
-      <h1 style={{ marginBottom: '1rem' }}>{record.Attendees}님의 정보</h1>
-      <p>
-        <strong>이벤트:</strong> {record.Event}
-      </p>
+    <div style={styles.container}>
+      <h1 style={styles.title}>{record.Attendees}님의 정보</h1>
+      <p><strong>이벤트:</strong> {record.Event}</p>
 
-      <p style={{ fontWeight: 'bold', marginTop: '1rem' }}>
-        설문조사로 이동하는 QR 코드:
-      </p>
+      <p style={styles.sectionTitle}>현재 페이지 링크로 생성된 QR 코드:</p>
       {qrDataUrl ? (
         <img
           src={qrDataUrl}
-          alt="Survey QR 코드"
-          style={{ width: 200, height: 200, display: 'block', margin: '0 auto' }}
+          alt="현재 페이지로 이동하는 QR 코드"
+          style={styles.qrImage}
         />
       ) : (
         <p>QR 코드 로딩 중...</p>
       )}
 
-      <p style={{ margin: '0.5rem 0' }}>
-        <strong>출석 여부:</strong> {record.AttendanceStatus ? '출석' : '미출석'}
-      </p>
-      <p style={{ margin: '0.5rem 0' }}>
-        <strong>상품 당첨:</strong> {record.Prize ? '당첨' : '미당첨'}
-      </p>
-      <p style={{ margin: '0.5rem 0' }}>
-        <strong>설문 참여:</strong> {record.Survey ? '참여함' : '미참여'}
-      </p>
-      <p style={{ margin: '0.5rem 0' }}>
-        <strong>현지 등록:</strong> {record.LocalRegist ? '등록됨' : '미등록'}
-      </p>
-      <p style={{ margin: '0.5rem 0' }}>
-        <strong>설문 링크:</strong>{' '}
-        <a href={surveyUrl} target="_blank" rel="noopener noreferrer">
-          설문조사 바로가기
-        </a>
-      </p>
+      {/* 기타 정보 표시 */}
+      <p><strong>출석 여부:</strong> {record.AttendanceStatus ? '출석' : '미출석'}</p>
+      <p><strong>상품 당첨:</strong> {record.Prize ? '당첨' : '미당첨'}</p>
+      <p><strong>설문 참여:</strong> {record.Survey ? '참여함' : '미참여'}</p>
+      <p><strong>현지 등록:</strong> {record.LocalRegist ? '등록됨' : '미등록'}</p>
 
-      {/* 새로 추가된 설문조사 참여 버튼 - 클릭 시 survey/[uuid].js 페이지로 이동 */}
-      <p style={{ margin: '1rem 0' }}>
+      {/* 설문조사 참여 버튼 */}
+      <p style={styles.buttonContainer}>
         <Link href={`/survey/${record.UUID}`}>
-          <a style={{ textDecoration: 'underline', color: 'blue' }}>
-            설문조사 참여
-          </a>
+          <a style={styles.button}>설문조사 참여</a>
         </Link>
       </p>
     </div>
   );
 }
+
+const styles = {
+  container: {
+    maxWidth: '600px',
+    margin: '0 auto',
+    padding: '1rem',
+    fontFamily: 'sans-serif',
+    textAlign: 'center',
+  },
+  title: {
+    marginBottom: '1rem',
+  },
+  sectionTitle: {
+    fontWeight: 'bold',
+    marginTop: '1rem',
+  },
+  qrImage: {
+    width: 200,
+    height: 200,
+    display: 'block',
+    margin: '0 auto',
+  },
+  buttonContainer: {
+    marginTop: '1rem',
+  },
+  button: {
+    display: 'inline-block',
+    padding: '0.5rem 1rem',
+    backgroundColor: '#0070f3',
+    color: 'white',
+    textDecoration: 'none',
+    borderRadius: '4px',
+  },
+};
 
 export async function getStaticPaths() {
   try {
@@ -94,7 +107,7 @@ export async function getStaticPaths() {
 
     return { paths, fallback: 'blocking' };
   } catch (error) {
-    console.error("getStaticPaths 에러:", error);
+    console.error('getStaticPaths 에러:', error);
     return { paths: [], fallback: 'blocking' };
   }
 }
@@ -102,28 +115,18 @@ export async function getStaticPaths() {
 export async function getStaticProps({ params }) {
   const { uuid } = params;
   try {
-    // DB에서 해당 UUID 레코드 조회
     const { rows } = await pool.query(
       'SELECT * FROM "Attendance" WHERE "UUID" = $1',
       [uuid]
     );
     const record = rows[0] || null;
 
-    if (!record) {
-      return { props: { record: null, surveyUrl: '' }, revalidate: 60 };
-    }
-
-    // QRSurveyLink 필드가 설문조사 기본 URL이라면, uuid 토큰을 붙입니다.
-    const surveyUrl = record.QRSurveyLink.includes('?')
-      ? `${record.QRSurveyLink}&uuid=${encodeURIComponent(record.UUID)}`
-      : `${record.QRSurveyLink}?uuid=${encodeURIComponent(record.UUID)}`;
-
     return {
-      props: { record, surveyUrl },
+      props: { record },
       revalidate: 60,
     };
   } catch (error) {
-    console.error("getStaticProps 에러:", error);
-    return { props: { record: null, surveyUrl: '' }, revalidate: 60 };
+    console.error('getStaticProps 에러:', error);
+    return { props: { record: null }, revalidate: 60 };
   }
 }
